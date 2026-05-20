@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="六年之约">
+  <meta name="theme-color" content="#2758CE">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>六年之约</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ========== 登录页 ========== -->
+    <main id="page-login" class="page active">
+      <div class="login-container">
+        <div class="login-logo">
+          <div class="login-avatar">📋</div>
+          <h1>六年之约</h1>
+          <p>用六年改变人生</p>
+        </div>
+
+        <div class="login-form" id="login-form">
+          <div class="form-group">
+            <label class="form-label">👤 账号</label>
+            <input type="text" id="login-username" class="form-input" placeholder="请输入账号" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">🔒 密码</label>
+            <input type="password" id="login-password" class="form-input" placeholder="请输入密码" maxlength="20">
+          </div>
+          <button class="btn-login" onclick="handleLogin()">登 录</button>
+          <button class="btn-register-link" onclick="toggleRegister()">没有账号？点此注册</button>
+        </div>
+
+        <div class="login-form" id="register-form" style="display:none;">
+          <div class="form-group">
+            <label class="form-label">👤 设置账号</label>
+            <input type="text" id="reg-username" class="form-input" placeholder="请输入账号" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">🔒 设置密码</label>
+            <input type="password" id="reg-password" class="form-input" placeholder="请设置密码" maxlength="20">
+          </div>
+          <button class="btn-login" onclick="handleRegister()">注 册</button>
+          <button class="btn-register-link" onclick="toggleRegister()">已有账号？点此登录</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- ========== 首页 ========== -->
+    <main id="page-home" class="page">
+      <header class="header">
+        <div class="header-left">
+          <div class="avatar" id="home-avatar" onclick="editProfile()">J</div>
+          <div>
+            <div class="header-title" id="home-nickname" onclick="editProfile()">Jack叔叔</div>
+            <div class="header-subtitle">六年之约 · 第 <span id="day-count">1</span> 天</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="btn-icon" onclick="navigateTo('settings')">⚙</button>
+        </div>
+      </header>
+
+      <!-- 本月热力图 -->
+      <section class="heatmap-section">
+        <div class="section-header">
+          <h2 class="section-title" id="heatmap-title">📅 本月打卡</h2>
+          <span class="section-badge" id="checkin-rate">0%</span>
+        </div>
+        <div class="heatmap-container">
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+          <div class="heatmap-legend">
+            <span>未打卡</span>
+            <div class="legend-block" style="background:#e0e0e0"></div>
+            <div class="legend-block" style="background:#58CEFF"></div>
+            <div class="legend-block" style="background:#CCFF28"></div>
+            <div class="legend-block" style="background:#FFB347"></div>
+            <div class="legend-block" style="background:#FF2854"></div>
+            <span>已打卡</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 今日状态卡片 -->
+      <section class="today-card" id="today-card">
+        <div class="today-status">
+          <div class="today-icon" id="today-icon">📝</div>
+          <div class="today-text">
+            <div class="today-title" id="today-title">今日尚未打卡</div>
+            <div class="today-desc" id="today-desc">点击开始记录今天的三件事</div>
+          </div>
+        </div>
+        <button class="btn-checkin" id="btn-checkin">开始打卡</button>
+      </section>
+
+      <!-- 连续打卡 -->
+      <section class="streak-section">
+        <div class="streak-item">
+          <div class="streak-num" id="current-streak">0</div>
+          <div class="streak-label">当前连续</div>
+        </div>
+        <div class="streak-item">
+          <div class="streak-num" id="max-streak">0</div>
+          <div class="streak-label">最长连续</div>
+        </div>
+        <div class="streak-item">
+          <div class="streak-num" id="total-days">0</div>
+          <div class="streak-label">累计天数</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========== 打卡页 ========== -->
+    <main id="page-checkin" class="page">
+      <header class="header">
+        <button class="btn-back" onclick="navigateTo('home')">←</button>
+        <div class="header-center">
+          <div class="header-title">今日打卡</div>
+          <div class="header-subtitle" id="checkin-date"></div>
+        </div>
+        <div style="width:44px"></div>
+      </header>
+
+      <section class="checkin-form">
+        <div class="form-group">
+          <label class="form-label">
+            <span class="emoji-badge">😊</span> 一件开心的事
+          </label>
+          <textarea id="input-happy" class="form-textarea" placeholder="今天发生了什么让你开心的事？" maxlength="500"></textarea>
+          <div class="char-count"><span id="happy-count">0</span>/500</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <span class="emoji-badge">😞</span> 一件不开心的事
+          </label>
+          <textarea id="input-sad" class="form-textarea" placeholder="今天有什么不开心的事？" maxlength="500"></textarea>
+          <div class="char-count"><span id="sad-count">0</span>/500</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <span class="emoji-badge">💭</span> 一个思考/感悟
+          </label>
+          <textarea id="input-thought" class="form-textarea" placeholder="今天有什么感悟或思考？" maxlength="500"></textarea>
+          <div class="char-count"><span id="thought-count">0</span>/500</div>
+        </div>
+
+        <button class="btn-submit" onclick="submitCheckin()">✅ 完成打卡</button>
+      </section>
+    </main>
+
+    <!-- ========== 存款页 ========== -->
+    <main id="page-savings" class="page">
+      <header class="header">
+        <button class="btn-back" onclick="navigateTo('home')">←</button>
+        <div class="header-center">
+          <div class="header-title">💰 存款目标</div>
+        </div>
+        <div style="width:44px"></div>
+      </header>
+
+      <section class="savings-content">
+        <!-- 目标设置卡片 -->
+        <div class="savings-card" id="savings-goal-card">
+          <div class="savings-goal-header">
+            <span class="savings-goal-icon">🎯</span>
+            <span>存款目标</span>
+            <button class="btn-edit-goal" onclick="editSavingsGoal()">✏️ 修改</button>
+          </div>
+          <div class="savings-goal-amount" id="savings-goal-display">¥ 1,000,000</div>
+          <div class="savings-goal-desc" id="savings-goal-desc">六年之约 · 百万目标</div>
+        </div>
+
+        <!-- 进度卡片 -->
+        <div class="savings-card">
+          <div class="progress-section">
+            <div class="progress-header">
+              <span>当前存款</span>
+              <span id="savings-percent">0%</span>
+            </div>
+            <div class="savings-current-row">
+              <span class="savings-current-amount" id="savings-current-display">¥ 0</span>
+            </div>
+            <div class="progress-bar savings-bar">
+              <div class="progress-fill savings-fill" id="savings-fill"></div>
+            </div>
+            <div class="progress-dates">
+              <span>¥0</span>
+              <span id="savings-goal-label">¥1,000,000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 存入表单（内联） -->
+        <div class="savings-card" id="savings-form-card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">➕ 存入一笔</h3>
+          <div class="savings-form-row">
+            <input type="number" id="savings-amount" class="form-input" placeholder="金额" min="0" step="0.01" style="flex:2;">
+            <input type="text" id="savings-note" class="form-input" placeholder="备注（可选）" maxlength="50" style="flex:3;">
+            <button class="btn-add-savings" id="btn-submit-savings" style="flex:1;padding:14px 8px;" onclick="submitSavings()">存入</button>
+          </div>
+        </div>
+
+        <!-- 存款记录 -->
+        <div class="savings-card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">📋 存款记录</h3>
+          <div class="savings-records" id="savings-records">
+            <div class="empty-state">
+              <div class="empty-icon">💰</div>
+              <div>暂无存款记录</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========== 目标设置弹窗 ========== -->
+    <div id="goal-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-sheet" id="goal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-date">设置存款目标</div>
+        <div class="form-group">
+          <label class="form-label">🎯 目标金额</label>
+          <input type="number" id="goal-amount" class="form-input" placeholder="请输入目标金额" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">📝 目标描述（可选）</label>
+          <input type="text" id="goal-desc" class="form-input" placeholder="如：六年之约 · 百万目标" maxlength="30">
+        </div>
+        <button class="btn-submit" id="btn-submit-goal">保存目标</button>
+      </div>
+    </div>
+
+    <!-- ========== 个人资料弹窗 ========== -->
+    <div id="profile-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-sheet" id="profile-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-date">编辑个人资料</div>
+        <div class="profile-avatar-edit" id="profile-avatar-edit-area">
+          <div class="profile-avatar-preview" id="profile-avatar-preview">J</div>
+          <div>
+            <span style="font-size:13px;">点击头像上传图片</span>
+            <span style="font-size:11px;color:#9ca3af;display:block;">或填写下方文字头像</span>
+          </div>
+        </div>
+        <input type="file" id="avatar-file-input" accept="image/*" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">头像文字（图片优先，1-2字）</label>
+          <input type="text" id="profile-avatar" class="form-input" placeholder="J" maxlength="2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">昵称</label>
+          <input type="text" id="profile-nickname" class="form-input" placeholder="Jack叔叔" maxlength="12">
+        </div>
+        <button class="btn-submit" id="btn-submit-profile">保存资料</button>
+        <button class="btn-logout" id="btn-logout-profile">退出登录</button>
+      </div>
+    </div>
+
+    <!-- ========== 历史记录页 ========== -->
+    <main id="page-history" class="page">
+      <header class="header">
+        <button class="btn-back" onclick="navigateTo('home')">←</button>
+        <div class="header-center">
+          <div class="header-title">打卡历史</div>
+        </div>
+        <div style="width:44px"></div>
+      </header>
+
+      <section class="history-filter">
+        <button class="filter-btn active" onclick="filterHistory('all', this)">全部</button>
+        <button class="filter-btn" onclick="filterHistory('2026', this)">2026年</button>
+        <button class="filter-btn" onclick="filterHistory('2025', this)">2025年</button>
+      </section>
+
+      <section class="history-list" id="history-list">
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div>暂无打卡记录</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========== 底部导航 ========== -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-page="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">首页</span>
+      </button>
+      <button class="nav-item" data-page="checkin" onclick="openCheckin()">
+        <span class="nav-icon">✏️</span>
+        <span class="nav-label">打卡</span>
+      </button>
+      <button class="nav-item" data-page="savings">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">存款</span>
+      </button>
+      <button class="nav-item" data-page="history">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">历史</span>
+      </button>
+      <button class="nav-item" data-page="stats">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">统计</span>
+      </button>
+    </nav>
+
+    <!-- ========== 统计页 ========== -->
+    <main id="page-stats" class="page">
+      <header class="header">
+        <button class="btn-back" onclick="navigateTo('home')">←</button>
+        <div class="header-center">
+          <div class="header-title">数据统计</div>
+        </div>
+        <div style="width:44px"></div>
+      </header>
+
+      <section class="stats-content">
+        <div class="stats-card">
+          <h3>📊 打卡概览</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value" id="stat-total">0</div>
+              <div class="stat-label">总打卡天数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-streak">0</div>
+              <div class="stat-label">最长连续</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-rate">0%</div>
+              <div class="stat-label">打卡率</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value" id="stat-month">0</div>
+              <div class="stat-label">本月打卡</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card">
+          <h3>📈 月度趋势</h3>
+          <div class="monthly-chart" id="monthly-chart"></div>
+        </div>
+
+        <div class="stats-card">
+          <h3>🎯 六年进度</h3>
+          <div class="progress-section">
+            <div class="progress-header">
+              <span>六年之约</span>
+              <span id="progress-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-dates">
+              <span>2024.12.31</span>
+              <span>2030.12.31</span>
+            </div>
+            <div class="progress-days">
+              已过去 <strong id="days-elapsed">0</strong> 天，剩余 <strong id="days-remaining">0</strong> 天
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========== 设置页 ========== -->
+    <main id="page-settings" class="page">
+      <header class="header">
+        <button class="btn-back" onclick="navigateTo('home')">←</button>
+        <div class="header-center">
+          <div class="header-title">设置</div>
+        </div>
+        <div style="width:44px"></div>
+      </header>
+
+      <section class="settings-content">
+        <div class="settings-group">
+          <div class="settings-item" onclick="editProfile()">
+            <span>👤 编辑个人资料</span>
+            <span class="settings-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="shareApp()">
+            <span>📤 分享给朋友</span>
+            <span class="settings-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="exportData()">
+            <span>💾 导出数据</span>
+            <span class="settings-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="importData()">
+            <span>📥 导入数据</span>
+            <span class="settings-arrow">›</span>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="settings-item" onclick="handleLogout()">
+            <span>🚪 退出登录</span>
+            <span class="settings-arrow">›</span>
+          </div>
+          <div class="settings-item" onclick="resetData()">
+            <span style="color:#FF2854">🗑 清除所有数据</span>
+            <span class="settings-arrow">›</span>
+          </div>
+        </div>
+        <div class="settings-footer">
+          <p>六年之约 · <span id="settings-nickname">Jack叔叔</span></p>
+          <p>用六年改变人生</p>
+          <p style="font-size:12px;color:#999;margin-top:8px;">v1.0.0</p>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  </script>
+</body>
+</html>
