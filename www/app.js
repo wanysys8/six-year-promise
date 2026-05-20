@@ -823,6 +823,92 @@ function refreshStats() {
   document.getElementById('days-remaining').textContent = remaining;
 }
 
+// ========== 导出数据（适配本地/WebView） ==========
+function exportData() {
+  const data = loadData();
+  const json = JSON.stringify(data, null, 2);
+
+  // Try clipboard first (works in Capacitor WebView)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(() => {
+      showToast('数据已复制到剪贴板，可粘贴保存');
+    }).catch(() => {
+      showExportModal(json);
+    });
+  } else {
+    showExportModal(json);
+  }
+}
+
+function showExportModal(json) {
+  closeDetailModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const sheet = document.createElement('div');
+  sheet.className = 'modal-sheet';
+  sheet.onclick = (e) => e.stopPropagation();
+  sheet.innerHTML = `
+    <div class="modal-handle"></div>
+    <div class="modal-date">📋 导出数据</div>
+    <textarea class="export-textarea" readonly>${json}</textarea>
+    <button class="btn-submit" style="margin-top:12px;">📋 点击复制</button>
+  `;
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  const btn = sheet.querySelector('.btn-submit');
+  const textarea = sheet.querySelector('.export-textarea');
+  btn.onclick = () => {
+    textarea.select();
+    document.execCommand('copy');
+    showToast('已复制到剪贴板');
+  };
+}
+
+// ========== 滑动切换页面 ==========
+let touchStartX = 0;
+let touchStartY = 0;
+const pageOrder = ['home', 'checkin', 'savings', 'history', 'stats'];
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('touchstart', function(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+
+    // Only trigger if horizontal swipe > 60px and not too vertical
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const currentPage = getCurrentPage();
+      const idx = pageOrder.indexOf(currentPage);
+      if (dx < -30 && idx < pageOrder.length - 1) {
+        // Swipe left → next page
+        const next = pageOrder[idx + 1];
+        if (next === 'checkin') openCheckin();
+        else navigateTo(next);
+      } else if (dx > 30 && idx > 0) {
+        // Swipe right → previous page
+        const prev = pageOrder[idx - 1];
+        if (prev === 'checkin') openCheckin();
+        else navigateTo(prev);
+      }
+    }
+  }, { passive: true });
+});
+
+function getCurrentPage() {
+  for (const p of pageOrder) {
+    const el = document.getElementById('page-' + p);
+    if (el && el.classList.contains('active')) return p;
+  }
+  return 'home';
+}
+
 // ========== 分享 ==========
 function shareApp() {
   const checkins = getAllCheckins();

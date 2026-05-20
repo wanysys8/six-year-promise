@@ -407,8 +407,8 @@
             <span>🚪 退出登录</span>
             <span class="settings-arrow">›</span>
           </div>
-          <div class="settings-item" onclick="resetData()">
-            <span style="color:#FF2854">🗑 清除所有数据</span>
+          <div class="settings-item danger" onclick="resetData()">
+            <span>🗑 清除所有数据</span>
             <span class="settings-arrow">›</span>
           </div>
         </div>
@@ -427,7 +427,7 @@
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
+      navigator.serviceWorker.register('/six-year-promise/sw.js', { scope: '/six-year-promise/' });
     }
   </script>
 </body>
