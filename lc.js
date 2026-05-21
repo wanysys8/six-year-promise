@@ -23,7 +23,7 @@ async function sbFetch(url, options) {
 
 // ========== 用户 ==========
 function sbEmail(username) {
-  return username + '@six-year.local';
+  return username + '@user.sixyear.org';
 }
 
 async function lcRegister(username, password) {
