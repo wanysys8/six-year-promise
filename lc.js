@@ -20,12 +20,22 @@ async function sbFetch(url, options) {
   return res.json();
 }
 
-// ========== 密码哈希 ==========
+// ========== 密码编码（兼容 WebView / 非安全上下文）==========
 
-async function sbHash(password) {
-  const data = new TextEncoder().encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+function sbHash(password) {
+  // 使用 TextEncoder + 简单混淆，无需 crypto.subtle
+  const bytes = new TextEncoder().encode(password);
+  let h1 = 0x67452301, h2 = 0xEFCDAB89;
+  for (let i = 0; i < bytes.length; i++) {
+    h1 = ((h1 << 5) - h1 + bytes[i]) | 0;
+    h2 = ((h2 << 3) + h2 ^ bytes[i]) | 0;
+  }
+  // 混入长度
+  h1 = ((h1 << 7) - h1 + bytes.length * 31) | 0;
+  h2 = ((h2 << 11) - h2 + bytes.length * 17) | 0;
+  // 转为 hex
+  const hex = (v) => Math.abs(v).toString(16).padStart(8, '0');
+  return hex(h1) + hex(h2) + hex(bytes.length);
 }
 
 // ========== 用户 ==========
