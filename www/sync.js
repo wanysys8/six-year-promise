@@ -101,11 +101,10 @@ async function syncProfileFromCloud() {
 async function syncOnStartup() {
   if (!LC_ENABLED) return;
 
-  // 先尝试恢复 Leancloud 登录态
+  // 先尝试恢复 Supabase 登录态
   try {
-    const lcUser = AV.User.current();
-    if (lcUser) {
-      // 已登录 Leancloud，拉取最新数据
+    const restored = await lcRestoreSession();
+    if (restored || lcGetCurrentUser()) {
       await syncProfileFromCloud();
       const changed = await pullFromCloud();
       if (changed) {

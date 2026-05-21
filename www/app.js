@@ -208,10 +208,8 @@ function handleLogout() {
   document.querySelector('.bottom-nav').style.display = 'none';
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
-  // 退出 Leancloud
-  if (typeof AV !== 'undefined' && AV.User.current()) {
-    AV.User.logOut().catch(() => {});
-  }
+  // 退出 Supabase
+  if (typeof lcLogout === 'function') lcLogout();
 }
 
 // ========== 个人资料 ==========
