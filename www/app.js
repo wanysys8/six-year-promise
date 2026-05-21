@@ -2,7 +2,7 @@
 const STORAGE_KEY = 'six-year-promise';
 const START_DATE = '2024-12-31';
 const END_DATE = '2030-12-31';
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 const UPDATE_URL = 'https://api.github.com/repos/wanysys8/six-year-promise/releases/latest';
 
 function loadData() {
