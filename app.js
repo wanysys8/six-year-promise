@@ -2,6 +2,8 @@
 const STORAGE_KEY = 'six-year-promise';
 const START_DATE = '2024-12-31';
 const END_DATE = '2030-12-31';
+const APP_VERSION = '1.0.1';
+const UPDATE_URL = 'https://api.github.com/repos/wanysys8/six-year-promise/releases/latest';
 
 function loadData() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -16,6 +18,7 @@ function loadData() {
 
 function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  if (typeof scheduleSync === 'function') scheduleSync();
 }
 
 function getData() {
@@ -57,7 +60,7 @@ function daysBetween(d1, d2) {
 }
 
 // ========== 登录系统 ==========
-function handleLogin() {
+async function handleLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value.trim();
 
@@ -69,25 +72,67 @@ function handleLogin() {
   const data = loadData();
   const user = data.users[username];
 
-  if (!user) {
-    showToast('账号不存在，请先注册');
+  // 辅助：完成本地登录并跳转首页
+  function finishLocalLogin(u) {
+    data.currentUser = username;
+    saveData(data);
+    applyProfileToUI(u);
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-home').classList.add('active');
+    document.querySelector('.bottom-nav').style.display = 'flex';
+    refreshHome();
+    showToast(`欢迎回来，${u.nickname || username}！`);
+  }
+
+  // 本地用户存在 + 密码正确 → 快速登录
+  if (user && user.password === password) {
+    finishLocalLogin(user);
+    // 后台尝试 Leancloud 登录，拉取云端数据
+    if (typeof lcLogin === 'function') {
+      lcLogin(username, password).then(() => {
+        return syncOnStartup();
+      }).then(() => {
+        refreshHome();
+      }).catch(() => {});
+    }
     return;
   }
 
-  if (user.password !== password) {
+  // 本地用户不存在 → 尝试 Leancloud 登录（新设备场景）
+  if (!user && typeof lcLogin === 'function') {
+    try {
+      await lcLogin(username, password);
+      // 云端登录成功，创建本地用户
+      let userProfile = { username, password, avatar: username.charAt(0).toUpperCase(), nickname: username, createdAt: Date.now() };
+      // 尝试拉取云端的用户资料
+      try {
+        const profile = await lcLoadProfile();
+        if (profile) {
+          userProfile.nickname = profile.nickname || username;
+          userProfile.avatar = profile.avatar || username.charAt(0).toUpperCase();
+          userProfile.avatarImage = profile.avatarImage || '';
+        }
+      } catch (e) {}
+      data.users[username] = userProfile;
+      finishLocalLogin(userProfile);
+      // 拉取云端打卡/存款数据
+      try {
+        const changed = await pullFromCloud();
+        if (changed) refreshHome();
+      } catch (e) {}
+      return;
+    } catch (e) {
+      showToast('账号不存在，请先注册');
+      return;
+    }
+  }
+
+  // 本地用户存在但密码错误
+  if (user) {
     showToast('密码错误');
-    return;
+  } else {
+    showToast('账号不存在，请先注册');
   }
-
-  data.currentUser = username;
-  saveData(data);
-  applyProfileToUI(user);
-
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-home').classList.add('active');
-  document.querySelector('.bottom-nav').style.display = 'flex';
-  refreshHome();
-  showToast(`欢迎回来，${user.nickname || username}！`);
 }
 
 function handleRegister() {
@@ -132,6 +177,13 @@ function handleRegister() {
   document.querySelector('.bottom-nav').style.display = 'flex';
   refreshHome();
   showToast('注册成功！欢迎加入六年之约');
+
+  // 后台注册 Leancloud 账号（非阻塞，失败不影响使用）
+  if (typeof lcRegister === 'function') {
+    lcRegister(username, password).then(() => {
+      return syncProfileToCloud();
+    }).catch(() => {});
+  }
 }
 
 function toggleRegister() {
@@ -156,6 +208,10 @@ function handleLogout() {
   document.querySelector('.bottom-nav').style.display = 'none';
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
+  // 退出 Leancloud
+  if (typeof AV !== 'undefined' && AV.User.current()) {
+    AV.User.logOut().catch(() => {});
+  }
 }
 
 // ========== 个人资料 ==========
@@ -286,6 +342,8 @@ function submitProfile() {
 
   closeModal('profile-modal');
   showToast('资料已更新');
+
+  if (typeof syncProfileToCloud === 'function') syncProfileToCloud();
 }
 
 // ========== 导航 ==========
@@ -981,6 +1039,57 @@ function resetData() {
   }
 }
 
+// ========== 版本更新检测 ==========
+async function checkUpdate(silent) {
+  try {
+    const resp = await fetch(UPDATE_URL, { cache: 'no-cache' });
+    if (!resp.ok) return;
+    const release = await resp.json();
+    const latestVer = release.tag_name.replace('v', '');
+
+    if (latestVer > APP_VERSION) {
+      showUpdateModal(release);
+    } else if (!silent) {
+      showToast('已是最新版本');
+    }
+  } catch (e) {
+    if (!silent) showToast('网络异常，检查失败');
+  }
+}
+
+function showUpdateModal(release) {
+  closeDetailModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const sheet = document.createElement('div');
+  sheet.className = 'modal-sheet';
+  sheet.onclick = (e) => e.stopPropagation();
+
+  const body = (release.body || '').replace(/\n/g, '<br>');
+  sheet.innerHTML = `
+    <div class="modal-handle"></div>
+    <div class="modal-date">🔔 发现新版本</div>
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="font-size:24px;font-weight:800;color:#2758CE;">${release.tag_name}</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:4px;">当前版本 v${APP_VERSION}</div>
+    </div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.6;">${body}</div>
+    <button class="btn-submit" style="background:linear-gradient(135deg,#2758CE,#4B78F0);">⬇ 立即下载更新</button>
+    <button class="btn-logout" style="margin-top:8px;">以后再说</button>
+  `;
+
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  sheet.querySelector('.btn-submit').onclick = () => {
+    window.open(release.html_url + '/download', '_system');
+    overlay.remove();
+  };
+  sheet.querySelector('.btn-logout').onclick = () => overlay.remove();
+}
+
 // ========== 初始化 ==========
 function init() {
   const data = loadData();
@@ -992,6 +1101,13 @@ function init() {
     document.querySelector('.bottom-nav').style.display = 'flex';
     applyProfileToUI(data.users[data.currentUser]);
     refreshHome();
+    checkUpdate(true); // silent check on startup
+    // 后台从云端拉取最新数据
+    if (typeof syncOnStartup === 'function') {
+      syncOnStartup().then(() => {
+        refreshHome();
+      }).catch(() => {});
+    }
   } else {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById('page-login').classList.add('active');
@@ -1030,6 +1146,7 @@ window.deleteSavingsRecord = deleteSavingsRecord;
 window.editSavingsGoal = editSavingsGoal;
 window.submitGoal = submitGoal;
 window.triggerAvatarUpload = triggerAvatarUpload;
+window.checkUpdate = checkUpdate;
 window.handleAvatarFile = handleAvatarFile;
 
 function bindEvents() {
